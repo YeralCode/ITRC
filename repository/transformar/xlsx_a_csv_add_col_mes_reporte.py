@@ -2,23 +2,25 @@ import pandas as pd
 import os
 import re
 
-base_path_original = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DISC/2022")
-base_path_limpio = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DISC/2022/CSV_LIMPIO/")
+base_path_original = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DISC/2023")
+base_path_limpio = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DISC/2023/CSV_LIMPIO/")
 archivo_xlsx = os.path.join(base_path_original, 'Mes de Agosto de 2021.xlsx')  # Reemplaza 'archivo.xlsx' con el nombre de tu archivo
 archivo_csv = os.path.join(base_path_limpio, 'Mes_de_Agosto_de_2021.csv')      # Reemplaza 'archivo.csv' con el nombre deseado para el CSV
 
 lista_archivos_xlsx = [
-    'ARCHIVO_DIAN_DISC_I20220101_F20220131.xlsx',
-    'ARCHIVO_DIAN_DISC_I20220201_F20220228.xlsx',
-    'ARCHIVO_DIAN_DISC_I20220301_F20220331.xlsx',
-    'ARCHIVO_DIAN_DISC_I20220401_F20220430.xlsx',
-    'ARCHIVO_DIAN_DISC_I20220501_F20220531.xlsx',
-    'ARCHIVO_DIAN_DISC_I20220601_F20220630.xlsx',
-    'ARCHIVO_DIAN_DISC_I20220701_F20220731.xlsx',
-    'ARCHIVO_DIAN_DISC_I20220901_F20220930.xlsx',
-    'ARCHIVO_DIAN_DISC_I20221001_F20221031.xlsx',
-    'ARCHIVO_DIAN_DISC_I20221101_20221130.xlsx',
-    'ARCHIVO_DIAN_DISC_I20221201_F20221231.xlsx',
+    'ARCHIVO_DIAN_DISC_I20230201_F20230228.xlsx',
+    'ARCHIVO_DIAN_DISC_I20230301_F20230331.xlsx',
+    'ARCHIVO_DIAN_DISC_I20230401_F20230430.xlsx',
+    'ARCHIVO_DIAN_DISC_I20230501_F20230531.xlsx',
+    'ARCHIVO_DIAN_DISC_I20230601_F20230630.xlsx',
+    'ARCHIVO_DIAN_DISC_I20230701_F20230731.xlsx',
+    'ARCHIVO_DIAN_DISC_I20230801_F20230831.xlsx',
+    'ARCHIVO_DIAN_DISC_I20230901_F20230930.xlsx',
+    'ARCHIVO_DIAN_DISC_I20231101_F20231130.xlsx',
+    'ARCHIVO_DIAN_DISC_I20231201_F20231231.xlsx',
+    'ARCHVO_DIAN_DISC_I20231001_F20231031.xlsx',
+
+
 ]
 MESES = {
     "Enero": "01", "Febrero": "02", "Marzo": "03", "Abril": "04",

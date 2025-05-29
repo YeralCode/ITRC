@@ -1,484 +1,333 @@
 import csv
 import os
-import re
-import unicodedata
-from datetime import datetime
-from valores_choice.direccion_seccional_dian import VALORES_DIRECCION_SECCIONAL, VALORES_REEMPLAZO_DIRECCION_SECCIONAL
-from valores_choice.departamento import VALORES_DEPARTAMENTO, VALORES_REEMPLAZO_DEPARTAMENTO
-from valores_choice.ciudad import VALORES_CIUDAD, VALORES_REEMPLAZO_CIUDAD
+from typing import Dict, List, Union, Optional, Tuple
+from dataclasses import dataclass
 
+NULL_VALUES = {"$null$", "nan", "NULL", "N.A", "null", "N.A."}
+DELIMITER = '|'
+ENCODING = 'utf-8'
+TEMP_COMMA_REPLACEMENT = '\uE000'
+TEMP_NEWLINE = '⏎'
+TEMP_COMMA = '\uE000'
 
-def limpiar_nit(valor):
-    """
-    Limpia un NIT eliminando caracteres no numéricos y ajustando la longitud.
-
-    Args:
-        valor: El NIT a limpiar.
-
-    Returns:
-        El NIT limpiado, o None si no es válido.
-    """
-    if valor is None:
-        return None
-    valor = str(valor).strip()
-    valor = valor.replace(".000000", "")
-    valor = valor.split("-")[0]  # quitar parte después del guion
-    valor = re.sub(r"[^\w]", "", valor)    # Elimina no numéricos
-    return valor
-
-def validar_entero(valor):
-    """Valida si un valor es un entero."""
-    if valor is None:
-        return False
-    valor = str(valor).strip()
-    return re.fullmatch(r"^-?\d+$", valor) is not None
-
-def validar_flotante(valor):
-    """Valida si un valor es un flotante."""
-    if valor is None:
-        return False
-    valor = str(valor).strip()
-    return re.fullmatch(r"^-?\d+(\.\d+)?$", valor) is not None
-
-def validar_fecha(valor):
-    """
-    Valida si un valor es una fecha en formato YYYY-MM-DD o DD/MM/YYYY y la convierte a objeto date.
-    """
-    if valor is None:
-        return None  # Retornar None en lugar de False para manejar valores nulos explícitamente
-    valor = str(valor).strip()
-    match_yyyy_mm_dd_hh_mm = re.fullmatch(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", valor)
-    if match_yyyy_mm_dd_hh_mm:
-        try:
-            dt = datetime.strptime(valor, "%Y-%m-%d %H:%M:%S")
-            if dt.time().hour == 0 and dt.time().minute == 0 and dt.time().second == 0:
-                valor = dt.strftime("%Y-%m-%d")  # convertir a solo fecha
-        except ValueError:
-            valor = str(valor).strip()
-            return re.fullmatch(r"^\d{4}-\d{2}-\d{2}$", valor) is not None
-    # Intenta con formato YYYY-MM-DD
-    match_yyyy_mm_dd = re.fullmatch(r"^\d{4}-\d{2}-\d{2}$", valor)
-    if match_yyyy_mm_dd:
-        try:
-            fecha_obj = datetime.strptime(valor, "%Y-%m-%d").date()
-            return fecha_obj.strftime("%Y-%m-%d")
-        except ValueError:
-            return False  # No es una fecha válida en este formato, probar el siguiente
-
-    # Intenta con formato DD/MM/YYYY
-    match_dd_mm_yyyy = re.fullmatch(r"^\d{1,2}/\d{2}/\d{4}$", valor)
-    if match_dd_mm_yyyy:
-        try:
-            fecha_obj =  datetime.strptime(valor, "%d/%m/%Y").date()
-            return fecha_obj.strftime("%Y-%m-%d")
-        except ValueError:
-            return False  # No es una fecha válida en este formato
-    match_dd_mm_yyyy_dos = re.match(r"^(\d{1,2}/\d{2}/\d{4})(?: - \d{1,2}/\d{2}/\d{4})?$", valor)
-    if match_dd_mm_yyyy_dos:
-        try:
-            fecha_obj =  datetime.strptime(match_dd_mm_yyyy_dos.group(1), "%d/%m/%Y").date()
-            return fecha_obj.strftime("%Y-%m-%d")
-        except ValueError:
-            return False  # No es una fecha válida en este formato
-    match_dd_mm_yyyy_dos = re.match(r"^(\d{1,2}/\d{2}/\d{4})(?: - \d{1,2}/\d{2}/\d{4})?$", valor)
-    if match_dd_mm_yyyy_dos:
-        try:
-            fecha_obj =  datetime.strptime(match_dd_mm_yyyy_dos.group(1), "%d/%m/%Y").date()
-            return fecha_obj.strftime("%Y-%m-%d")
-        except ValueError:
-            return False
-    match_yyyy_mm_dd_dos = re.match(r"^(\d{4}-\d{2}-\d{2})(?: - \d{4}-\d{2}-\d{2})?$", valor)
-    if match_yyyy_mm_dd_dos:
-        try:
-            fecha_obj = datetime.strptime(match_yyyy_mm_dd_dos.group(1), "%Y-%m-%d").date()
-            return fecha_obj.strftime("%Y-%m-%d")  # Retornar en formato %Y-%m-%d
-        except ValueError:
-            return False
-    return False # Retorna False si no coincide con ninguno de los formatos
-
-def validar_fecha_dd_mm_yyyy(valor):
-    """Valida si un valor es una fecha en formato YYYY-MM-DD."""
-    if valor is None:
-        return False
-    valor = str(valor).strip()
-    return re.fullmatch(r"^\d{2}/\d{2}/\d{4}$", valor) is not None
-
-def validar_fecha_hora(valor):
-    """Valida si un valor es una fecha y hora en formato YYYY-MM-DD HH:MM."""
-    if valor is None:
-        return False
-
-    valor = str(valor).strip()
-
-    # Intenta parsear el valor como datetime
-    try:
-        dt = datetime.strptime(valor, "%Y-%m-%d %H:%M:%S")
-        if dt.time().hour == 0 and dt.time().minute == 0 and dt.time().second == 0:
-            valor = dt.strftime("%Y-%m-%d")  # convertir a solo fecha
-    except ValueError:
-        valor = str(valor).strip()
-        return re.fullmatch(r"^\d{4}-\d{2}-\d{2}$", valor) is not None
-
-
-    return valor
-
-def validar_cadena(valor):
-    """Valida si un valor es una cadena (siempre es verdadero, pero limpia espacios)."""
-    if valor is None:
-        return True #consideramos nulo como cadena vacia
-    return True
-def validar_cadena_caracteres_especiales(valor):
-    """
-    Valida si un valor es una cadena.
-    - Si es None, retorna True.
-    - Si es cadena, remueve espacios y normaliza caracteres especiales (acentos, tildes, etc.).
-    """
-    if valor is None:
-        return True  # Consideramos nulo como cadena vacía
-
-    # Eliminar espacios al inicio y final
-    valor = valor.strip()
-
-    # Normalizar la cadena para eliminar acentos y caracteres especiales
-    valor = unicodedata.normalize('NFKD', valor).encode('ASCII', 'ignore').decode('ASCII')
-    valor = valor.replace('.', '').replace(',', '')
-
-    # Puedes retornar el valor limpio si necesitas procesarlo más adelante
-    return valor
-
-def validar_direccion_seccional(valor):
-    """
-    Valida si un valor corresponde a una dirección seccional válida.
-    Retorna True si es válido, False en caso contrario.
-    """
-    if valor is None:
-        return True  # Se permite None aquí
-    if '-' in valor:
-        valor = valor.split('-', 1)[1]
-    valor_normalizado = validar_cadena_caracteres_especiales(valor).lower()
-    if "direccion seccional de impuestos  y aduanas de " in valor_normalizado:
-        valor_normalizado = valor_normalizado.replace("direccion seccional de impuestos  y aduanas de", "direccion seccional de impuestos y aduanas de")
-    if "direccion seccional de impuestos  de " in valor_normalizado:
-        valor_normalizado = valor_normalizado.replace("direccion seccional de impuestos  de ", "direccion seccional de impuestos de ")
-    if "direccion seccionalde aduanas de" in valor_normalizado:
-        valor_normalizado = valor_normalizado.replace("direccion seccionalde aduanas de", "direccion seccional de aduanas de")
-    if "direccion seccional de impuests y aduanas de" in valor_normalizado:
-        valor_normalizado = valor_normalizado.replace("direccion seccional de impuests y aduanas de", "direccion seccional de impuestos y aduanas de")
-    valor_normalizado = VALORES_REEMPLAZO_DIRECCION_SECCIONAL.get(valor_normalizado, valor_normalizado)
-    if not valor_normalizado in VALORES_DIRECCION_SECCIONAL:
-        # breakpoint()
-        return False
-    else:
-        return valor_normalizado
-
-def validar_departamento(valor):
-    """
-    Valida si un valor corresponde a una dirección seccional válida.
-    Retorna True si es válido, False en caso contrario.
-    """
-    if valor is None:
-        return True  # Se permite None aquí
-
-    valor_normalizado = validar_cadena_caracteres_especiales(valor).upper()
-    valor_normalizado = VALORES_REEMPLAZO_DEPARTAMENTO.get(valor_normalizado, valor_normalizado)
-    if not valor_normalizado in VALORES_DEPARTAMENTO:
-        return False
-    else:
-        return valor_normalizado
-def validar_ciudad(valor):
-    """
-    Valida si un valor corresponde a una dirección seccional válida.
-    Retorna True si es válido, False en caso contrario.
-    """
-    if valor is None:
-        return True  # Se permite None aquí
-
-    valor_normalizado = validar_cadena_caracteres_especiales(valor).upper()
-    valor_normalizado = VALORES_REEMPLAZO_CIUDAD.get(valor_normalizado, valor_normalizado)
-    if not valor_normalizado in VALORES_CIUDAD:
-        return False
-    else:
-        return valor_normalizado
-
-def validar_expediente(valor):
-    patron = r'^\d{3}-\d{3}-\d{4}-\d+$'
-    return bool(re.match(patron, valor))
-
-
-
-def procesar_csv(archivo_entrada, archivo_salida, archivo_errores, tipos_por_posicion):
-    """
-    Procesa un archivo CSV, valida los tipos de datos y guarda los datos limpios y los errores.
-
-    Args:
-        archivo_entrada: Ruta del archivo CSV de entrada.
-        archivo_salida: Ruta del archivo CSV de salida para los datos limpios.
-        archivo_errores: Ruta del archivo CSV para guardar los errores.
-        tipos_por_posicion: Diccionario que mapea las posiciones de las columnas a los tipos de datos.
-    """
-    errores = []
-    filas_procesadas = []
-    nombre_archivo = os.path.splitext(os.path.basename(archivo_entrada))[0]
-
-    # Extraer "mes año" del nombre del archivo
-
-
-    with open(archivo_entrada, 'r', encoding='utf-8') as archivo_csv:
-        lector_csv = csv.reader(archivo_csv, delimiter='|')
-        encabezado = next(lector_csv)# Leer el encabezado
-        print(f"Archivo leído exitosamente. Número de columnas: {len(encabezado)}")
-        print(f"Primeras columnas: {encabezado[:5]} ...")
-
-        for num_fila, fila in enumerate(lector_csv, start=1):  # Iterar sobre las filas
-            fila_procesada = []
-            if len(fila) != len(encabezado):
-                errores.append({
-                    "fila": num_fila,
-                    "error": "Número de columnas en la fila no coincide con el encabezado",
-                    "valor": fila
-                })
-                continue  # Saltar la fila si el número de columnas no coincide
-            for num_col, valor in enumerate(fila):
-                col_name = encabezado[num_col]
-                tipo_esperado = None
-                for tipo, posiciones in tipos_por_posicion.items():
-                    if num_col in posiciones:
-                        tipo_esperado = tipo
-                        break
-                if tipo_esperado is None:
-                    tipo_esperado = "str" #si no esta en la lista se trata como str
-                valor_original = valor
-                valor = valor.replace("$null$", "").replace("nan", "").replace(
-                    "NULL", "").replace("N.A", "").replace("N.A.", "")
-                if tipo_esperado == "int" and valor != "":
-                    valor = str(valor).replace(".0", "")
-                    if validar_entero(valor):
-                        valor_procesado = int(valor)
-                    else:
-                        errores.append({
-                            "columna": col_name,
-                            "numero_columna":num_col,
-                            "tipo": "int",
-                            "valor": valor_original,
-                            "fila": num_fila,
-                            "error": "No es un entero válido"
-                        })
-                        valor_procesado = 0
-                        break
-                elif tipo_esperado == "float" and valor != "":
-                    if "." not in valor and validar_entero(valor):
-                        valor = str(valor) + ".0"
-                    if validar_flotante(valor):
-                        valor_procesado = float(valor)
-                    else:
-                        errores.append({
-                            "columna": col_name,
-                            "numero_columna":num_col,
-                            "tipo": "float",
-                            "valor": valor_original,
-                            "fila": num_fila,
-                            "error": "No es un flotante válido"
-                        })
-                        valor_procesado = 0.0
-                        break
-                elif tipo_esperado == "date" and valor != "":
-                    if validar_fecha(valor):
-                        valor_procesado = valor  # Ya está en formato YYYY-MM-DD
-                    else:
-                        errores.append({
-                            "columna": col_name,
-                            "numero_columna":num_col,
-                            "tipo": "date",
-                            "valor": valor_original,
-                            "fila": num_fila,
-                            "error": "No es una fecha válida (YYYY-MM-DD)"
-                        })
-                        valor_procesado = True
-                        break
-                elif tipo_esperado == "date-dd-mm-yyyy" and valor != "":
-                    if validar_fecha_dd_mm_yyyy(valor):
-                        valor_procesado = valor  # Ya está en formato YYYY-MM-DD
-                    else:
-                        errores.append({
-                            "columna": col_name,
-                            "numero_columna":num_col,
-                            "tipo": "date",
-                            "valor": valor_original,
-                            "fila": num_fila,
-                            "error": "No es una fecha válida (YYYY-MM-DD)"
-                        })
-                        valor_procesado = True
-                        break
-                elif tipo_esperado == "datetime" and valor != "":
-                    valor = validar_fecha_hora(valor)
-                    if valor is False:
-                        errores.append({
-                            "columna": col_name,
-                            "numero_columna":num_col,
-                            "tipo": "datetime",
-                            "valor": valor_original,
-                            "fila": num_fila,
-                            "error": "No es una fecha y hora válida (YYYY-MM-DD HH:MM)"
-                        })
-                        valor_procesado = True
-                        break
-                    else:
-                        valor_procesado = valor #ya esta en el formato
-                        
-                elif tipo_esperado == "nit":
-                    valor_procesado = limpiar_nit(valor)
-                    if valor_procesado is None:
-                            errores.append({
-                            "columna": col_name,
-                            "numero_columna":num_col,
-                            "tipo": "nit",
-                            "valor": valor_original,
-                            "fila": num_fila,
-                    
-                            "error": "No es un NIT válido"
-                        })
-                            valor_procesado = True
-                            break
-                elif tipo_esperado == "choice_direccion_seccional" and valor != "":
-                    valor = validar_direccion_seccional(valor)
-                    if valor is False:
-                        errores.append({
-                            "columna": col_name,
-                            "numero_columna":num_col,
-                            "tipo": "choice",
-                            "valor": valor_original,
-                            "fila": num_fila,
-                            "error": "No se encuentra en direccion seccional"
-                        })
-                        valor_procesado = True
-                        break
-                    else:
-                        valor_procesado = valor #ya esta en el formato
-                elif tipo_esperado == "choice_departamento" and valor != "":
-                    valor = validar_departamento(valor)
-                    if valor is False:
-                        errores.append({
-                            "columna": col_name,
-                            "numero_columna":num_col,
-                            "tipo": "choice",
-                            "valor": valor_original,
-                            "fila": num_fila,
-                            "error": "No se encuentra en Departamento"
-                        })
-                        valor_procesado = True
-                        break
-                    else:
-                        valor_procesado = valor #ya esta en el formato
-                        
-                elif tipo_esperado == "choice_ciudad" and valor != "":
-                    valor = validar_ciudad(valor)
-                    if valor is False:
-                        errores.append({
-                            "columna": col_name,
-                            "numero_columna":num_col,
-                            "tipo": "choice",
-                            "valor": valor_original,
-                            "fila": num_fila,
-                            "error": "No se encuentra en macroproceso"
-                        })
-                        valor_procesado = True
-                        break
-                    else:
-                        valor_procesado = valor #ya esta en el formato
-                elif tipo_esperado == "expediente" and valor != "":
-                    valor = validar_expediente(valor)
-                    if valor is False:
-                        errores.append({
-                            "columna": col_name,
-                            "numero_columna":num_col,
-                            "tipo": "choice",
-                            "valor": valor_original,
-                            "fila": num_fila,
-                            "error": "no cumple como un expediente "
-                        })
-                        valor_procesado = True
-                        break
-                    else:
-                        valor_procesado = valor_original
-                elif tipo_esperado == "str":
-                    valor_procesado = str(valor).strip()
-                elif tipo_esperado == "str-sin-caracteres-especiales":
-                    valor_procesado = validar_cadena_caracteres_especiales(valor)
-                else:
-                    valor_procesado = str(valor).strip()
-
-                fila_procesada.append(valor_procesado)
-            filas_procesadas.append(fila_procesada)
-
-        # Guardar archivo limpio
-        # if not errores: # Solo guardar si no hay errores
-        print(f"Guardando archivo limpio como '{archivo_salida}'...")
-        try:
-            with open(archivo_salida, 'w', newline='', encoding='utf-8') as archivo_csv_limpio:
-                escritor_csv = csv.writer(archivo_csv_limpio, delimiter='|')
-                escritor_csv.writerow(encabezado)
-                escritor_csv.writerows(filas_procesadas)
-            print("✅ Archivo limpio guardado.")
-        except Exception as e:
-            print(f"❌ Error al guardar el archivo limpio: {e}")
-            errores.append({"archivo": archivo_salida, "error": str(e), "tipo": "escritura"})
-        # else:
-        #     print("No se guardó el archivo limpio debido a errores.")
-
-        # Guardar errores
-        if errores:
-            print(f"⚠️ Se encontraron {len(errores)} errores. Guardando en '{archivo_errores}'...")
-            try:
-                with open(archivo_errores, 'w', newline='', encoding='utf-8') as archivo_csv_errores:
-                    escritor_csv_errores = csv.DictWriter(archivo_csv_errores, fieldnames=errores[0].keys())
-                    escritor_csv_errores.writeheader()
-                    escritor_csv_errores.writerows(errores)
-                print("📝 Archivo de errores guardado.")
-            except Exception as e:
-                print(f"❌ Error al guardar el archivo de errores: {e}")
-                print("  Errores encontrados:")
-                for error in errores:
-                    print(f"    - {error}")
-        else:
-            print("🎉 No se encontraron errores durante el procesamiento.")
-
-if __name__ == "__main__":
-    # Rutas de los archivos
-    archivo_entrada = "consolidado_final_disciplinario_Ene_Dic_2022.csv"  # Reemplaza con tu archivo de entrada
-    base_path = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DISC/2022/CSV_LIMPIO/")
-    archivo_entrada = os.path.join(base_path, archivo_entrada)
-    archivo_salida = os.path.join(base_path, "consolidado_final_disciplinario_Ene_Dic_2022_procesado.csv")
-    archivo_errores = os.path.join(base_path, "errores_procesamiento.csv")
-
-    # Mapeo de tipos de datos por posición de columna
-    tipos_por_posicion = {
-    "int": [],
-    "float": [],
-    "date": [3, 4, 5, 6,32, 33, 34, 35],
-    "datetime": [],
-    "str": [0, 1, 7, 12, 13, 15, 16, 17, 18, 21, 22, 23, 24, 25, 26, 27,
-            28, 29, 30, 31, 35, 36, 37, 38, 39, 40, 41],
-    "str-sin-caracteres-especiales": [
-        14
-    ],
-    "nit": [
-        8
-    ],
-    "choice_departamento": [
-        9,
-    ],
-    "choice_ciudad": [
-        10,
-    ],
-    "choice_direccion_seccional": [
-        11,
-    ],
-    "expediente": [
-        2,
-    ]
+# Encabezados de referencia
+REFERENCE_HEADERS = [
+    'NOMBRE_ARCHIVO',
+    'MES_REPORTE',
+    "NO_EXPEDIENTE",
+    "FECHA_RADICACION",
+    "FECHA_HECHOS",
+    "INDAGACION_PRELIMINAR",
+    "INVESTIGACION_DISCIPLINARIA",
+    "IMPLICADO",
+    "IDENTIFICACION",
+    "DEPARTAMENTO",
+    "CIUDAD",
+    "DIRECCION_SECCIONAL_O_EQUIVALENTE",
+    "DEPENDENCIA",
+    "PROCESO",
+    "SUBPROCESO",
+    "PROCEDIMIENTO",
+    "CARGO",
+    "ORIGEN",
+    "CONDUCTA",
+    "ETAPA_PROCESAL",
+    "FECHA_FALLO",
+    "SANCION_IMPUESTA",
+    "HECHO",
+    "DECISION",
+    "PROCESO_AFECTADO",
+    "SENALADOS_O_VINCULADOS",
+    "ADECUACION_TIPICA",
+    "ABOGADO",
+    "SENTIDO_DEL_FALLO",
+    "QUEJOSO",
+    "IDENTIFICACION_QUEJOSO",
+    "TIPO_DE_PROCESO",
+    "FECHA_PLIEGO_DE_CARGOS",
+    "FECHA_CITACION",
+    "FECHA_CIERRE_DE_INVESTIGACION"
+]
+# Mapeo de reemplazo de columnas
+REPLACEMENT_MAP = {
 }
 
-    procesar_csv(archivo_entrada, archivo_salida, archivo_errores, tipos_por_posicion)
+@dataclass
+class ErrorInfo:
+    columna: str
+    numero_columna: int
+    tipo: str
+    valor: str
+    fila: int
+    error: str
 
+class CSVProcessor:
+    def __init__(self, validator=None):
+        self.validator = validator
+        self.error_messages = {
+            'invalid_integer': "No es un entero válido",
+            'invalid_float': "No es un flotante válido",
+            'invalid_date': "No es una fecha válida",
+            'invalid_datetime': "No es una fecha y hora válida",
+            'invalid_nit': "No es un NIT válido",
+            'invalid_departamento': "No se encuentra en departamento",
+            'invalid_ciudad': "No se encuentra en ciudad",
+            'invalid_direccion_seccional': "No se encuentra en direccion seccional",
+            'invalid_expediente': "No es un expediente valido",
+            'invalid_columns': "Número de columnas no coincide con el encabezado"
+        }
+        
+    def normalize_column_name(self, column_name: str) -> str:
+        """Normaliza nombres de columnas reemplazando espacios y caracteres especiales."""
+        column_name = column_name.strip().upper()
+        replacements = [
+            (' ', '_'), ('-', '_'), ('Á', 'A'), ('É', 'E'), ('Í', 'I'),
+            ('Ó', 'O'), ('Ú', 'U'), ('Ñ', 'N'), ('.', '')
+        ]
+        for old, new in replacements:
+            column_name = column_name.replace(old, new)
+        return column_name
 
+    def organize_headers(self, actual_headers: List[str]) -> List[str]:
+        """Organiza headers segue REFERENCE_HEADERS y aplica reemplazos."""
+        normalized = [self.normalize_column_name(h) for h in actual_headers]
+        
+        # Aplicar reemplazos
+        for i, header in enumerate(normalized):
+            normalized[i] = REPLACEMENT_MAP.get(header, header)
+        
+        # Eliminar duplicados manteniendo orden
+        seen = set()
+        unique_headers = []
+        for h in normalized:
+            if h not in seen:
+                seen.add(h)
+                unique_headers.append(h)
+        
+        # Ordenar según REFERENCE_HEADERS
+        ref_headers_normalized = [self.normalize_column_name(h) for h in REFERENCE_HEADERS]
+        ordered = []
+        remaining = []
+        
+        for ref_h in ref_headers_normalized:
+            if ref_h in unique_headers:
+                ordered.append(ref_h)
+        
+        remaining = [h for h in unique_headers if h not in ordered]
+        return ordered + remaining
 
+    def clean_value(self, value: str) -> str:
+        """Limpia valores nulos y espacios."""
+        if value is None:
+            return ""
+        value = str(value).strip()
+        return "" if value.upper() in NULL_VALUES else value
+
+    def preprocess_line(self, line: str) -> str:
+        """Preprocesa línea para manejar comas y saltos internos."""
+        if not line.strip():
+            return line
+            
+        line = line.replace('\\n', TEMP_NEWLINE)
+        in_quotes = False
+        processed = []
+        
+        for char in line:
+            if char == '"':
+                in_quotes = not in_quotes
+                processed.append(char)
+            elif char == ',' and not in_quotes:
+                processed.append(TEMP_COMMA)
+            else:
+                processed.append(char)
+        
+        return ''.join(processed)
+
+    def postprocess_field(self, field: str) -> str:
+        """Restaura caracteres especiales a su forma original."""
+        return field.replace(TEMP_COMMA, ',').replace(TEMP_NEWLINE, '\n')
+
+    def read_csv(self, input_file: str) -> Tuple[List[str], List[List[str]]]:
+        """Lee CSV con manejo de comas y saltos internos."""
+        with open(input_file, 'r', encoding=ENCODING) as f:
+            processed_content = [self.preprocess_line(line) for line in f.read().splitlines()]
+            
+            reader = csv.reader(
+                processed_content,
+                delimiter=DELIMITER,
+                quotechar='"',
+                escapechar='\\'
+            )
+            
+            data = [row for row in reader]
+            return data[0], data[1:] if len(data) > 1 else []
+
+    def process_csv(self, input_file: str, output_file: str, error_file: str = None, 
+                   type_mapping: Dict[str, List[int]] = None) -> None:
+        """
+        Procesa CSV completo con:
+        - Normalización de headers
+        - Validación de datos
+        - Manejo de errores
+        """
+        try:
+            header, rows = self.read_csv(input_file)
+            normalized_header = self.organize_headers(header)
+            
+            errors = []
+            processed_rows = []
+            
+            for row_num, row in enumerate(rows, start=1):
+                try:
+                    if len(row) != len(header):
+                        raise ValueError(f"Columnas esperadas: {len(header)}, obtenidas: {len(row)}")
+                    
+                    processed_row = []
+                    for col_num, (raw_val, col_name) in enumerate(zip(row, header), start=1):
+                        value = self.postprocess_field(raw_val)
+                        clean_val = self.clean_value(value)
+                        
+                        # Validación de tipos si hay type_mapping y validator
+                        if type_mapping and self.validator:
+                            expected_type = self._get_expected_type(col_num, type_mapping)
+                            clean_val, error = self._validate_value(clean_val, expected_type, col_name, col_num, row_num)
+                            if error:
+                                errors.append(error)
+                        
+                        processed_row.append(clean_val)
+                    
+                    # Reorganizar según headers normalizados
+                    final_row = self._reorganize_row(processed_row, header, normalized_header)
+                    processed_rows.append(final_row)
+                
+                except Exception as e:
+                    errors.append(ErrorInfo(
+                        columna="", numero_columna=0, tipo="processing",
+                        valor=str(row), fila=row_num, error=str(e)
+                    ))
+            
+            self._save_output(output_file, normalized_header, processed_rows)
+            if errors and error_file:
+                self._save_errors(error_file, errors)
+            
+        except Exception as e:
+            raise Exception(f"Error procesando archivo: {str(e)}")
+
+    def _get_expected_type(self, col_num: int, type_mapping: Dict[str, List[int]]) -> str:
+        """Obtiene el tipo esperado para una columna."""
+        for type_name, columns in type_mapping.items():
+            if col_num in columns:
+                return type_name
+        return "str"
+
+    def _validate_value(self, value: str, expected_type: str, col_name: str, 
+                       col_num: int, row_num: int) -> Tuple[str, Optional[ErrorInfo]]:
+        """Valida un valor según su tipo esperado."""
+        if not value or not self.validator:
+            return value, None
+            
+        try:
+            validation_methods = {
+                "int": ("validar_entero", "invalid_integer"),
+                "float": ("validar_flotante", "invalid_float"),
+                "date": ("validar_date", "invalid_date"),
+                "datetime": ("validar_date", "invalid_datetime"),
+                "nit": ("limpiar_nit", "invalid_nit"),
+                "choice_departamento": ("validar_departamento", "invalid_departamento"),
+                "choice_ciudad": ("validar_ciudad", "invalid_ciudad"),
+                "choice_direccion_seccional": ("validar_direccion_seccional", "invalid_direccion_seccional"),
+                "expediente": ("validar_expediente", "invalid_expediente"),
+            }
+            
+            if expected_type in validation_methods:
+                method, error_key = validation_methods[expected_type]
+                validator = getattr(self.validator, method)
+                validated, is_valid = validator(value)
+                if not is_valid:
+                    raise ValueError(self.error_messages[error_key])
+                
+                return validated, None
+            
+            return value, None
+            
+        except ValueError as e:
+            error = ErrorInfo(
+                columna=col_name, numero_columna=col_num,
+                tipo=expected_type, valor=value, fila=row_num,
+                error=str(e)
+            )
+            return validated, error
+
+    def _reorganize_row(self, row: List[str], original_headers: List[str], 
+                       final_headers: List[str]) -> List[str]:
+        """Reorganiza una fila según los headers finales."""
+        header_map = {self.normalize_column_name(h): i for i, h in enumerate(original_headers)}
+        final_row = []
+        for header in final_headers:
+            norm_header = self.normalize_column_name(header)
+            if norm_header in header_map:
+                final_row.append(row[header_map[norm_header]])
+            else:
+                # Buscar posibles mapeos alternativos
+                for orig, replacement in REPLACEMENT_MAP.items():
+                    if replacement == header and orig in header_map:
+                        final_row.append(row[header_map[orig]])
+                        break
+                    else:
+                        final_row.append("")
+
+        return final_row
+
+    def _save_output(self, file_path: str, header: List[str], data: List[List[str]]) -> None:
+        """Guarda datos procesados en CSV."""
+        with open(file_path, 'w', newline='', encoding=ENCODING) as f:
+            writer = csv.writer(f, delimiter=DELIMITER, quotechar='"', quoting=csv.QUOTE_ALL)
+            writer.writerow(header)
+            writer.writerows(data)
+
+    def _save_errors(self, file_path: str, errors: List[ErrorInfo]) -> None:
+        """Guarda errores en CSV."""
+        with open(file_path, 'w', newline='', encoding=ENCODING) as f:
+            writer = csv.DictWriter(f, fieldnames=errors[0].__dict__.keys())
+            writer.writeheader()
+            writer.writerows([e.__dict__ for e in errors])
+
+# Ejemplo de uso
+if __name__ == "__main__":
+    from validadores.validadores_disciplinarios import ValidadoresDisciplinarios
+    
+    processor = CSVProcessor(validator=ValidadoresDisciplinarios())
+    
+    type_mapping = {
+    "int": [],
+    "float": [],
+    "date": [4, 5, 6, 7, 33, 34, 35, 36],  # Original: [3,4,5,6,32,33,34,35]
+    "datetime": [],
+    "str": [1, 2, 8, 13, 14, 16, 17, 18, 19, 22, 23, 24, 25, 26, 27,
+            28, 29, 30, 31, 32, 36, 37, 38, 39, 40, 41, 42],  # Original tenía 35-41
+    "str-sin-caracteres-especiales": [
+        15  # Original: 14
+    ],
+    "nit": [
+        9  # Original: 8
+    ],
+    "choice_departamento": [
+        10,  # Original: 9
+    ],
+    "choice_ciudad": [
+        11,  # Original: 10
+    ],
+    "choice_direccion_seccional": [
+        12,  # Original: 11
+    ],
+    "expediente": [
+        3,  # Original: 2
+    ]
+}
+    base_path = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DISC/2024/CSV_LIMPIO/")
+    input_file = os.path.join(base_path, "consolidado_final_disciplinario_2024_sin_arrobas.csv")
+    output_file = os.path.join(base_path, "consolidado_final_disciplinario_2024_procesado.csv")
+    error_file = os.path.join(base_path, "errores_procesamiento.csv")
+
+    
+    processor.process_csv(input_file, output_file, error_file, type_mapping)

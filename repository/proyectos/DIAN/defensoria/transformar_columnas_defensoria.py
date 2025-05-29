@@ -3,7 +3,7 @@ import os
 from typing import Dict, List, Union, Optional, Tuple
 from dataclasses import dataclass
 
-NULL_VALUES = {"$null$", "nan", "NULL", "N.A", "null"}
+NULL_VALUES = {"$null$", "nan", "NULL", "N.A", "null", "N.A."}
 DELIMITER = '|'
 ENCODING = 'utf-8'
 TEMP_COMMA_REPLACEMENT = '\uE000'
@@ -327,9 +327,9 @@ if __name__ == "__main__":
         14,
     ]
 }
-    base_path = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DEFENSORIA/2024/CSV/")
-    input_file = os.path.join(base_path, "consolidado_final_defensoria_Ene_Dic_2024.csv")
-    output_file = os.path.join(base_path, "consolidado_final_defensoria_Ene_Dic_2024_procesado.csv")
+    base_path = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DISC/2024/CSV_LIMPIO/")
+    input_file = os.path.join(base_path, "consolidado_final_disciplinario_2024_sin_arrobas.csv")
+    output_file = os.path.join(base_path, "consolidado_final_disciplinario_2024_procesado.csv")
     error_file = os.path.join(base_path, "errores_procesamiento.csv")
 
     
