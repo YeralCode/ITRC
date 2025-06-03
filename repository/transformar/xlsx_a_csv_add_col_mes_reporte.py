@@ -2,23 +2,17 @@ import pandas as pd
 import os
 import re
 
-base_path_original = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DISC/2023")
-base_path_limpio = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DISC/2023/CSV_LIMPIO/")
+base_path_original = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_PQRS/2023/DYNAMICS/")
+base_path_limpio = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_PQRS/2023/DYNAMICS/CSV/")
 archivo_xlsx = os.path.join(base_path_original, 'Mes de Agosto de 2021.xlsx')  # Reemplaza 'archivo.xlsx' con el nombre de tu archivo
 archivo_csv = os.path.join(base_path_limpio, 'Mes_de_Agosto_de_2021.csv')      # Reemplaza 'archivo.csv' con el nombre deseado para el CSV
 
 lista_archivos_xlsx = [
-    'ARCHIVO_DIAN_DISC_I20230201_F20230228.xlsx',
-    'ARCHIVO_DIAN_DISC_I20230301_F20230331.xlsx',
-    'ARCHIVO_DIAN_DISC_I20230401_F20230430.xlsx',
-    'ARCHIVO_DIAN_DISC_I20230501_F20230531.xlsx',
-    'ARCHIVO_DIAN_DISC_I20230601_F20230630.xlsx',
-    'ARCHIVO_DIAN_DISC_I20230701_F20230731.xlsx',
-    'ARCHIVO_DIAN_DISC_I20230801_F20230831.xlsx',
-    'ARCHIVO_DIAN_DISC_I20230901_F20230930.xlsx',
-    'ARCHIVO_DIAN_DISC_I20231101_F20231130.xlsx',
-    'ARCHIVO_DIAN_DISC_I20231201_F20231231.xlsx',
-    'ARCHVO_DIAN_DISC_I20231001_F20231031.xlsx',
+    'ITRC Agosto de 2023 Sistema de PQSRD Dynamics-08.xlsx',
+    'ITRC Diciembre de 2023 Sistema de PQSRD Dynamics-12.xlsx',
+    'ITRC Noviembre de 2023 Sistema de PQSRD Dynamics-11.xlsx',
+    'ITRC Octubre de 2023 Sistema de PQSRD Dynamics-10.xlsx',
+    'ITRC Septiembre de 2023 Sistema de PQSRD Dynamics-09.xlsx',
 
 
 ]
@@ -26,6 +20,10 @@ MESES = {
     "Enero": "01", "Febrero": "02", "Marzo": "03", "Abril": "04",
     "Mayo": "05", "Junio": "06", "Julio": "07", "Agosto": "08",
     "Septiembre": "09", "Octubre": "10", "Noviembre": "11", "Diciembre": "12"
+}
+MESES_LOWER = {
+    "enero": "1", "febrero": "2", "marzo": "3", "abril": "4", "mayo": "5", "junio": "6",
+    "julio": "7", "agosto": "8", "septiembre": "9", "octubre": "10", "noviembre": "11", "diciembre": "12"
 }
 
 for nombre_archivo_xlsx in lista_archivos_xlsx:
@@ -37,6 +35,8 @@ for nombre_archivo_xlsx in lista_archivos_xlsx:
     coincidencia = re.search(r"Mes_([A-Za-z]+)_(\d{4})", nombre_archivo_csv)
     coincidencia_2 = re.search(r"Mes_de_([A-Za-z]+)_de_(\d{4})", nombre_archivo_csv)
     coincidencia_fecha = re.search(r"I(\d{8})", nombre_archivo_csv)
+    coincidencia_pqr = re.search( r"(\d{4})-(\d{2})", nombre_archivo_csv)
+    coincidencia_dynamics = re.search(  r"_(\w+)_(\d{4})_", nombre_archivo_csv)
     mes_reporte = "Desconocido"
     if coincidencia :
         mes_nombre = coincidencia.group(1).capitalize()
@@ -55,6 +55,18 @@ for nombre_archivo_xlsx in lista_archivos_xlsx:
         anio = fecha_str[:4]
         mes = fecha_str[4:6]
         mes_reporte = f"{mes}_{anio}"
+    if coincidencia_dynamics:
+        mes_nombre = coincidencia_dynamics.group(1).lower()  
+        anio = coincidencia_dynamics.group(2)
+        mes_numero = MESES_LOWER.get(mes_nombre)
+        if mes_numero:
+            mes_reporte = f"{mes_numero}_{anio}"
+    if coincidencia_pqr:
+        anio = coincidencia_pqr.group(1)
+        mes_numero = coincidencia_pqr.group(2)
+        mes_numero_sin_cero = str(int(mes_numero))
+        mes_reporte = f"{mes_numero_sin_cero}_{anio}"
+    
 
     if os.path.exists(archivo_xlsx):
         print(f"Procesando archivo: {archivo_xlsx}")
