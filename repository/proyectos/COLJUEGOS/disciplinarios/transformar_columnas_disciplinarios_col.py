@@ -2,6 +2,7 @@ import csv
 import os
 from typing import Dict, List, Union, Optional, Tuple
 from dataclasses import dataclass
+import io
 
 NULL_VALUES = {"$null$", "nan", "NULL", "N.A", "null", "N.A."}
 DELIMITER = '|'
@@ -12,45 +13,45 @@ TEMP_COMMA = '\uE000'
 
 # Encabezados de referencia
 REFERENCE_HEADERS = [
-    'NOMBRE_ARCHIVO',
-    'MES_REPORTE',
-    "NO_EXPEDIENTE",
-    "FECHA_RADICACION",
-    "FECHA_HECHOS",
-    "INDAGACION_PRELIMINAR",
-    "INVESTIGACION_DISCIPLINARIA",
-    "IMPLICADO",
-    "IDENTIFICACION",
-    "DEPARTAMENTO",
-    "CIUDAD",
-    "DIRECCION_SECCIONAL_O_EQUIVALENTE",
-    "DEPENDENCIA",
-    "PROCESO",
-    "SUBPROCESO",
-    "PROCEDIMIENTO",
-    "CARGO",
-    "ORIGEN",
-    "CONDUCTA",
-    "ETAPA_PROCESAL",
-    "FECHA_FALLO",
-    "SANCION_IMPUESTA",
-    "HECHO",
-    "DECISION",
-    "PROCESO_AFECTADO",
-    "SENALADOS_O_VINCULADOS",
-    "ADECUACION_TIPICA",
-    "ABOGADO",
-    "SENTIDO_DEL_FALLO",
-    "QUEJOSO",
-    "IDENTIFICACION_QUEJOSO",
-    "TIPO_DE_PROCESO",
-    "FECHA_PLIEGO_DE_CARGOS",
-    "FECHA_CITACION",
-    "FECHA_CIERRE_DE_INVESTIGACION"
+"EXPEDIENTE",
+"FECHA_DE_RADICACION",
+"FECHA_DE_LOS_HECHOS",
+"FECHA_DE_INDAGACION_PRELIMINAR",
+"FECHA_DE_INVESTIGACION_DISCIPLINARIA",
+"IMPLICADO",
+"DOCUMENTO_DEL_IMPLICADO",
+"DEPARTAMENTO_DE_LOS_HECHOS",
+"CIUDAD_DE_LOS_HECHOS",
+"DIRECCION_SECCIONAL",
+"DEPENDENCIA",
+"PROCESO",
+"SUBPROCESO",
+"PROCEDIMIENTO",
+"CARGO",
+"ORIGEN",
+"CONDUCTA",
+"ETAPA_PROCESAL",
+"FECHA_DE_FALLO",
+"SANCION_IMPUESTA",
+"HECHOS",
+"DECISION_DE_LA_INVESTIGACION",
+"TIPO_DE_PROCESO_AFECTADO",
+"SENALADOS_O_VINCULADOS_CON_LA_INVESTIGACION",
+"ADECUACION_TIPICA",
+"ABOGADO",
+"SENTIDO_DEL_FALLO",
+"QUEJOSO",
+"DOC_QUEJOSO",
+"TIPO_DE_PROCESO",
+"FECHA_CITACION",
+"FECHA_DE_CARGOS",
+"FECHA_DE_CIERRE_INVESTIGACION"
 ]
+
 # Mapeo de reemplazo de columnas
 REPLACEMENT_MAP = {
 }
+
 
 @dataclass
 class ErrorInfo:
@@ -70,19 +71,17 @@ class CSVProcessor:
             'invalid_date': "No es una fecha válida",
             'invalid_datetime': "No es una fecha y hora válida",
             'invalid_nit': "No es un NIT válido",
-            'invalid_departamento': "No se encuentra en departamento",
-            'invalid_ciudad': "No se encuentra en ciudad",
             'invalid_direccion_seccional': "No se encuentra en direccion seccional",
-            'invalid_expediente': "No es un expediente valido",
-            'invalid_columns': "Número de columnas no coincide con el encabezado"
+            'invalid_columns': "Número de columnas no coincide con el encabezado",
+            "invalid_proceso": "No se encuentra en proceso"
         }
-        
+
     def normalize_column_name(self, column_name: str) -> str:
         """Normaliza nombres de columnas reemplazando espacios y caracteres especiales."""
         column_name = column_name.strip().upper()
         replacements = [
             (' ', '_'), ('-', '_'), ('Á', 'A'), ('É', 'E'), ('Í', 'I'),
-            ('Ó', 'O'), ('Ú', 'U'), ('Ñ', 'N'), ('.', '')
+            ('Ó', 'O'), ('Ú', 'U'), ('Ñ', 'N'), ('.', ''), ('/', '_'),
         ]
         for old, new in replacements:
             column_name = column_name.replace(old, new)
@@ -91,11 +90,11 @@ class CSVProcessor:
     def organize_headers(self, actual_headers: List[str]) -> List[str]:
         """Organiza headers segue REFERENCE_HEADERS y aplica reemplazos."""
         normalized = [self.normalize_column_name(h) for h in actual_headers]
-        
+
         # Aplicar reemplazos
         for i, header in enumerate(normalized):
             normalized[i] = REPLACEMENT_MAP.get(header, header)
-        
+
         # Eliminar duplicados manteniendo orden
         seen = set()
         unique_headers = []
@@ -103,7 +102,7 @@ class CSVProcessor:
             if h not in seen:
                 seen.add(h)
                 unique_headers.append(h)
-        
+
         # Ordenar según REFERENCE_HEADERS
         ref_headers_normalized = [self.normalize_column_name(h) for h in REFERENCE_HEADERS]
         ordered = []
@@ -112,7 +111,6 @@ class CSVProcessor:
         for ref_h in ref_headers_normalized:
             if ref_h in unique_headers:
                 ordered.append(ref_h)
-        
         remaining = [h for h in unique_headers if h not in ordered]
         return ordered + remaining
 
@@ -151,7 +149,6 @@ class CSVProcessor:
         """Lee CSV con manejo de comas y saltos internos."""
         with open(input_file, 'r', encoding=ENCODING) as f:
             processed_content = [self.preprocess_line(line) for line in f.read().splitlines()]
-            
             reader = csv.reader(
                 processed_content,
                 delimiter=DELIMITER,
@@ -233,10 +230,8 @@ class CSVProcessor:
                 "date": ("validar_date", "invalid_date"),
                 "datetime": ("validar_date", "invalid_datetime"),
                 "nit": ("limpiar_nit", "invalid_nit"),
-                "choice_departamento": ("validar_departamento", "invalid_departamento"),
-                "choice_ciudad": ("validar_ciudad", "invalid_ciudad"),
                 "choice_direccion_seccional": ("validar_direccion_seccional", "invalid_direccion_seccional"),
-                "expediente": ("validar_expediente", "invalid_expediente"),
+                "choice_proceso": ("validar_proceso", "invalid_proceso")
             }
             
             if expected_type in validation_methods:
@@ -281,7 +276,7 @@ class CSVProcessor:
     def _save_output(self, file_path: str, header: List[str], data: List[List[str]]) -> None:
         """Guarda datos procesados en CSV."""
         with open(file_path, 'w', newline='', encoding=ENCODING) as f:
-            writer = csv.writer(f, delimiter=DELIMITER, quotechar='"', quoting=csv.QUOTE_ALL)
+            writer = csv.writer(f, delimiter=DELIMITER)
             writer.writerow(header)
             writer.writerows(data)
 
@@ -294,40 +289,31 @@ class CSVProcessor:
 
 # Ejemplo de uso
 if __name__ == "__main__":
-    from validadores.validadores_disciplinarios import ValidadoresDisciplinarios
+    from validadores.validadores_disciplianrios import ValidadoresDisciplinarios
     
     processor = CSVProcessor(validator=ValidadoresDisciplinarios())
     
     type_mapping = {
     "int": [],
     "float": [],
-    "date": [4, 5,  7, ],  # Original: [3,4,5,6,32,33,34,35]
-    "datetime": [],
-    "str": [1, 2, 8,6, 13, 14, 16, 17, 18, 19, 22, 23, 24, 25, 26, 27,
-            28, 29, 30, 31,33, 32, 34, 35, 36, 37, 38, 39, 40, 41, 42],  # Original tenía 35-41
+    "date": [],
+    "datetime": [4,5,6,7,21,33,34,35],
+    "str": [     1, 2, 3, 8, 10, 11, 13, 15, 16, 17, 18, 19,20, 
+    22, 23, 24, 25,26, 27, 28, 29, 30, 31, 32
+    ],
     "str-sin-caracteres-especiales": [
-        15  # Original: 14
     ],
-    "nit": [
-        9  # Original: 8
-    ],
-    "choice_departamento": [
-        10,  # Original: 9
-    ],
-    "choice_ciudad": [
-        11,  # Original: 10
-    ],
-    "choice_direccion_seccional": [
-        12,  # Original: 11
-    ],
-    "expediente": [
-        3,  # Original: 2
-    ]
+    "nit": [9],
+    "choice_direccion_seccional": [12],
+    "choice_proceso": [14]
 }
-    base_path = os.path.expanduser("~/Descargas/A")
-    input_file = os.path.join(base_path, "ARCHIVO_DIAN_DISC_I20250401_20250430_CONVERTIDO_sin_arrobas.csv")
-    output_file = os.path.join(base_path, "ARCHIVO_DIAN_DISC_I20250401_20250430_procesado.csv")
-    error_file = os.path.join(base_path, "errores_procesamiento.csv")
 
-    
+    base_path = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_COLJUEGOS_DISCIPLINARIOS/2024/CSV/")
+    input_file = os.path.join(base_path, "consolidado_coljuegos_disciplinarios_2024.csv")
+    output_file = os.path.join(base_path, "consolidado_coljuegos_disciplinarios_2024_procesado.csv")
+    error_file = os.path.join(base_path, "consolidado_coljuegos_disciplinarios_2024_errores_procesamiento.csv")
+
+
     processor.process_csv(input_file, output_file, error_file, type_mapping)
+
+

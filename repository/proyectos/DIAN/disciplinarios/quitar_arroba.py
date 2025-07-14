@@ -52,10 +52,10 @@ def main():
     Función principal para ejecutar el procesamiento del CSV.
     """
     # Rutas de los archivos
-    archivo_entrada_nombre = "consolidado_final_disciplinario_2024.csv"
-    base_path = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DISC/2024/CSV_LIMPIO/")
+    archivo_entrada_nombre = "ARCHIVO_DIAN_DISC_I20250401_20250430_CONVERTIDO.csv"
+    base_path = os.path.expanduser("~/Descargas/A")
     ruta_entrada = os.path.join(base_path, archivo_entrada_nombre)
-    ruta_salida = os.path.join(base_path, "consolidado_final_disciplinario_2024_sin_arrobas.csv")
+    ruta_salida = os.path.join(base_path, "ARCHIVO_DIAN_DISC_I20250401_20250430_CONVERTIDO_sin_arrobas.csv")
 
     # Llamar a la función para procesar el CSV
     procesar_csv(ruta_entrada, ruta_salida)

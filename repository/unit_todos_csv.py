@@ -3,12 +3,17 @@ import os
 
 # Lista de archivos CSV a combinar
 filenames = [
-    "consolidado_2023_dian_pqr_dynamics.csv",
-    "consolidado_2024_dian_pqr_dynamics.csv",
+
+"ARCHIVO_COLJ_I20250101_F20250131.csv",
+"consolidado_coljuegos_pqr_2021_procesado.csv",
+"consolidado_coljuegos_pqr_2022_procesado.csv",
+"consolidado_coljuegos_pqr_2023_procesado.csv",
+"consolidado_coljuegos_pqr_2024_procesado.csv",
+
 
 ]
 # Ruta base donde están los archivos
-base_path = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_PQRS/2024/DYNAMICS/CSV/")
+base_path = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_COLJUEGOS_PQRS")
 
 # Función para limpiar valores tipo '123.0' -> '123'
 def clean_value(val):
@@ -38,7 +43,7 @@ if not dataframes:
     print("❗ No se cargó ningún archivo válido. Proceso cancelado.")
 else:
     combined_df = pd.concat(dataframes, ignore_index=True)
-    output_file = os.path.join(base_path, "consolidado_2023_2024_dian_pqr_dynamics.csv")
+    output_file = os.path.join(base_path, "consolidado_coljuegos_pqr_2021.csv")
     combined_df.to_csv(output_file, sep='|', index=False)
     print(f"✅ Consolidado generado con éxito en: {output_file} ({combined_df.shape[0]} filas)")
 

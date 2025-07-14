@@ -2,18 +2,24 @@ import pandas as pd
 import os
 import re
 
-base_path_original = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_PQRS/2023/DYNAMICS/")
-base_path_limpio = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_PQRS/2023/DYNAMICS/CSV/")
+base_path_original = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_COLJUEGOS_PQRS/2021")
+base_path_limpio = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_COLJUEGOS_PQRS/2021/CSV/")
 archivo_xlsx = os.path.join(base_path_original, 'Mes de Agosto de 2021.xlsx')  # Reemplaza 'archivo.xlsx' con el nombre de tu archivo
 archivo_csv = os.path.join(base_path_limpio, 'Mes_de_Agosto_de_2021.csv')      # Reemplaza 'archivo.csv' con el nombre deseado para el CSV
 
 lista_archivos_xlsx = [
-    'ITRC Agosto de 2023 Sistema de PQSRD Dynamics-08.xlsx',
-    'ITRC Diciembre de 2023 Sistema de PQSRD Dynamics-12.xlsx',
-    'ITRC Noviembre de 2023 Sistema de PQSRD Dynamics-11.xlsx',
-    'ITRC Octubre de 2023 Sistema de PQSRD Dynamics-10.xlsx',
-    'ITRC Septiembre de 2023 Sistema de PQSRD Dynamics-09.xlsx',
-
+    "01_enero_2021.xlsx",
+    "02_febrero_2021.xlsx",
+    "03_marzo_2021.xlsx",
+    "04_abril_2021.xlsx",
+    "05_mayo_2021.xlsx",
+    "06_junio_2021.xlsx",
+    "07_julio_2021.xlsx",
+    "08_agosto_2021.xlsx",
+    "09_septiembre_2021.xlsx",
+    "10_octubre_2021.xlsx",
+    "11_noviembre_2021.xlsx",
+    "12_diciembre_2021.xlsx",
 
 ]
 MESES = {

@@ -2,22 +2,15 @@ import os
 import csv
 import re
 
-base_path_original = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DISC/2024/CSV_CONVERTIDOS")
-base_path_limpio = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DISC/2024/CSV_LIMPIO/")
+base_path_original = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_COLJUEGOS_PQRS/2025/CSV")
+base_path_limpio = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_COLJUEGOS_PQRS/2025/CSV/A")
 
 lista_archivos_csv_at = [
-    'ARCHIVO_DIAN_DISC_I20240101_F20240131_CONVERTIDO.csv',
-    'ARCHIVO_DIAN_DISC_I20240201_F20240229_CONVERTIDO.csv',
-    'ARCHIVO_DIAN_DISC_I20240301_F20240331_CONVERTIDO.csv',
-    'ARCHIVO_DIAN_DISC_I20240401_F20240430_CONVERTIDO.csv',
-    'ARCHIVO_DIAN_DISC_I20240501_F20240531_CONVERTIDO.csv',
-    'ARCHIVO_DIAN_DISC_I20240601_F20240630_CONVERTIDO.csv',
-    'ARCHIVO_DIAN_DISC_I20240701_F20240731_CONVERTIDO.csv',
-    'ARCHIVO_DIAN_DISC_I20240801_F20240831_CONVERTIDO.csv',
-    'ARCHIVO_DIAN_DISC_I20240901_F20240930_CONVERTIDO.csv',
-    'ARCHIVO_DIAN_DISC_I20241001_F20241031_CONVERTIDO.csv',
-    'ARCHIVO_DIAN_DISC_I20241101_F20241130_CONVERTIDO.csv',
-    'ARCHIVO_DIAN_DISC_I20241201_F20241231_CONVERTIDO.csv',
+"ARCHIVO_COLJ_I20250101_F20250131.csv",
+"ARCHIVO_COLJ_I20250201_F20250227.csv",
+"ARCHIVO_COLJ_I20250301_F20250331.csv",
+
+
 ]
 
 # Asegurarse de que el directorio de salida exista
@@ -45,13 +38,13 @@ for nombre_archivo_csv_at in lista_archivos_csv_at:
                     mes = fecha_str[4:6]
                     mes_reporte = f"{mes}_{anio}"
                 primera_linea = infile.readline().strip()
-                cabecera = primera_linea.split('@|')
+                cabecera = primera_linea.split('|@')
                 nueva_cabecera = ['nombre_archivo', 'mes_reporte'] + cabecera
                 outfile.write('|'.join(nueva_cabecera) + '\n')
 
                 # Escribir los datos con las columnas adicionales vacías al principio
                 for line in infile:
-                    campos = line.strip().split('@|')
+                    campos = line.strip().split('|@')
                     nueva_linea = [nombre_archivo_csv_at, mes_reporte] + campos
                     outfile.write('|'.join(nueva_linea) + '\n')
             print(f'Archivo convertido y guardado en: {archivo_salida}')
@@ -70,13 +63,13 @@ for nombre_archivo_csv_at in lista_archivos_csv_at:
                         mes = fecha_str[4:6]
                         mes_reporte = f"{mes}_{anio}"
                     primera_linea = infile_latin.readline().strip()
-                    cabecera = primera_linea.split('@|')
+                    cabecera = primera_linea.split('|@')
                     nueva_cabecera = ['nombre_archivo', 'mes_reporte'] + cabecera
                     outfile.write('|'.join(nueva_cabecera) + '\n')
 
                     # Escribir los datos con las columnas adicionales vacías al principio
                     for line in infile_latin:
-                        campos = line.strip().split('@|')
+                        campos = line.strip().split('|@')
                         nueva_linea = [os.path.splitext(nombre_archivo_csv_at)[0], mes_reporte] + campos
                         outfile.write('|'.join(nueva_linea) + '\n')
                 print(f'Archivo convertido y guardado (con latin-1) en: {archivo_salida}')

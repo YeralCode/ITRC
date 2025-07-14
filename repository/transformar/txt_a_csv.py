@@ -47,22 +47,11 @@ def txt_to_csv(filenames, base_path, input_separator="|", output_separator="|"):
 
 # Lista de archivos a procesar
 filenames = [
-    'ARCHIVO_DIAN_DISC_I20240101_F20240131.txt',
-    'ARCHIVO_DIAN_DISC_I20240201_F20240229.txt',
-    'ARCHIVO_DIAN_DISC_I20240301_F20240331.txt',
-    'ARCHIVO_DIAN_DISC_I20240401_F20240430.txt',
-    'ARCHIVO_DIAN_DISC_I20240501_20240531.txt',
-    'ARCHIVO_DIAN_DISC_I20240601_F20240630.txt',
-    'ARCHIVO_DIAN_DISC_I20240701_F20240731.txt',
-    'ARCHIVO_DIAN_DISC_I20240801_F20240831.txt',
-    'ARCHIVO_DIAN_DISC_I20240901_F20240930.txt',
-    'ARCHIVO_DIAN_DISC_I20241001_F20241031.txt',
-    'ARCHIVO_DIAN_DISC_I20241101_F20241130.txt',
-    'ARCHIVO_DIAN_DISC_I20241201_20241231.txt',
+    'ARCHIVO_DIAN_DISC_I20250401_20250430.txt',
 ]
 
 # Ruta base donde están los archivos
-base_path = os.path.expanduser("~/Documentos/ITRC/DOCUMENTOS_LIMPIAR/copia_DIAN_DISC/2024/")
+base_path = os.path.expanduser("~/Descargas")
 
 # Verificar si la ruta existe
 if not os.path.exists(base_path):
